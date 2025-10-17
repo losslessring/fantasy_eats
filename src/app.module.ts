@@ -1,4 +1,9 @@
-import { Module } from '@nestjs/common'
+import {
+  Module,
+  NestModule,
+  MiddlewareConsumer,
+  RequestMethod,
+} from '@nestjs/common'
 import { GraphQLModule } from '@nestjs/graphql'
 import { join } from 'path'
 import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo'
@@ -7,6 +12,11 @@ import { TypeOrmModule } from '@nestjs/typeorm'
 import { ConfigModule } from '@nestjs/config'
 import * as Joi from 'joi'
 import { Restaurant } from './restaurants/entities/restaurant.entity'
+import { UsersModule } from './users/users.module'
+import { CommonModule } from './common/common.module'
+import { User } from './users/entities/user.entity'
+import { JwtModule } from './jwt/jwt.module'
+import { jwtMiddleware } from './jwt/jwt.middleware'
 
 @Module({
   imports: [
@@ -21,6 +31,7 @@ import { Restaurant } from './restaurants/entities/restaurant.entity'
         DB_USERNAME: Joi.string().required(),
         DB_PASSWORD: Joi.string().required(),
         DB_NAME: Joi.string().required(),
+        PRIVATE_KEY: Joi.string().required(),
       }),
     }),
     TypeOrmModule.forRoot({
@@ -32,15 +43,16 @@ import { Restaurant } from './restaurants/entities/restaurant.entity'
       database: process.env.DB_NAME,
       synchronize: process.env.NODE_ENV !== 'prod',
       logging: process.env.NODE_ENV !== 'prod',
-      entities: [Restaurant],
+      entities: [User],
     }),
     GraphQLModule.forRoot<ApolloDriverConfig>({
       driver: ApolloDriver,
-      //autoSchemaFile: join(process.cwd(), 'src/schema.gql'),
       autoSchemaFile: true,
       graphiql: true,
     }),
-    RestaurantsModule,
+    UsersModule,
+    CommonModule,
+    JwtModule.forRoot({ privateKey: String(process.env.PRIVATE_KEY) }),
   ],
   controllers: [],
   providers: [],
