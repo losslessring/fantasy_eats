@@ -9,7 +9,7 @@ import { JwtService } from 'src/jwt/jwt.service'
 import { ConfigService } from '@nestjs/config'
 
 @Injectable()
-export class UsersService {
+export class UserService {
   constructor(
     @InjectRepository(User) private readonly users: Repository<User>,
     private readonly config: ConfigService,
@@ -68,5 +68,9 @@ export class UsersService {
         error,
       }
     }
+  }
+
+  async findById(id: number): Promise<User | null> {
+    return this.users.findOneBy({ id })
   }
 }
