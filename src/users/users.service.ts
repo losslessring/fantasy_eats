@@ -10,6 +10,7 @@ import { ConfigService } from '@nestjs/config'
 import { EditProfileInput } from './dtos/edit-profile.dto'
 import { Verification } from './entities/verification.entity'
 import { MailService } from 'src/mail/mail.service'
+import { UserProfileOutput } from './dtos/user-profile.dto'
 
 @Injectable()
 export class UserService {
@@ -81,46 +82,56 @@ export class UserService {
     } catch (error) {
       return {
         ok: false,
-        error,
+        error: 'Can not login user',
       }
     }
   }
 
-  async findById(id: number): Promise<User | null> {
-    return this.users.findOneBy({ id })
+  async findById(id: number): Promise<UserProfileOutput> {
+    //return this.users.findOneBy({ id })
+    try {
+      const user = await this.users.findOneByOrFail({ id })
+      return { ok: true, user }
+    } catch (error) {
+      return { ok: false, error: 'User not found' }
+    }
   }
 
   async editProfile(
     userId: number,
     { email, password }: EditProfileInput,
   ): Promise<{ ok: boolean; error?: string }> {
-    const user = await this.users.findOneBy({ id: userId })
+    try {
+      const user = await this.users.findOneBy({ id: userId })
 
-    if (!user) {
-      return {
-        ok: false,
-        error: 'User not found',
+      if (!user) {
+        return {
+          ok: false,
+          error: 'User not found',
+        }
       }
-    }
 
-    if (email) {
-      user.email = email
-      user.verified = false
-      const verification = await this.verifications.save(
-        this.verifications.create({ user }),
-      )
-      this.mailService.sendVerificationEmail(user.email, verification.code)
-    }
+      if (email) {
+        user.email = email
+        user.verified = false
+        const verification = await this.verifications.save(
+          this.verifications.create({ user }),
+        )
+        this.mailService.sendVerificationEmail(user.email, verification.code)
+      }
 
-    if (password) {
-      user.password = password
-    }
+      if (password) {
+        user.password = password
+      }
 
-    this.users.save(user)
-    return { ok: true }
+      this.users.save(user)
+      return { ok: true }
+    } catch (error) {
+      return { ok: false, error: 'Could not update profile' }
+    }
   }
 
-  async verifyEmail(code: string): Promise<boolean> {
+  async verifyEmail(code: string): Promise<{ ok: boolean; error?: string }> {
     try {
       const verification = await this.verifications.findOne({
         where: { code },
@@ -131,13 +142,12 @@ export class UserService {
         verification.user.verified = true
         await this.users.save(verification.user)
         await this.verifications.delete(verification.id)
-        return true
+        return { ok: true }
       }
 
-      throw new Error()
-    } catch (e) {
-      console.log(e)
-      return false
+      return { ok: false, error: 'Verification not found' }
+    } catch (error) {
+      return { ok: false, error: 'Could not verify email' }
     }
   }
 }

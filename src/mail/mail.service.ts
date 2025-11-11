@@ -10,12 +10,7 @@ export class MailService {
     @Inject(CONFIG_OPTIONS) private readonly options: MailModuleOptions,
   ) {}
 
-  private async sendEmail(
-    email: string,
-    code: string,
-    subject: string,
-    content: string,
-  ) {
+  async sendEmail(email: string, code: string) {
     const transporter = nodemailer.createTransport({
       host: 'smtp.ethereal.email',
       port: 587,
@@ -24,18 +19,18 @@ export class MailService {
         pass: this.options.apiKey,
       },
     })
-    ;(async () => {
-      const info = await transporter.sendMail({
-        from: `"Fantasy eats" <${this.options.fromEmail}>`,
-        to: email,
-        subject: `Your verification code is ${code}`,
-        text: `Your verification code is ${code}`,
-        html: `<b>Your verification code is ${code}</b>`,
-      })
-    })()
+    //;(async () => {
+    const info = await transporter.sendMail({
+      from: `"Fantasy eats" <${this.options.fromEmail}>`,
+      to: email,
+      subject: `Your verification code is ${code}`,
+      text: `Your verification code is ${code}`,
+      html: `<b>Your verification code is ${code}</b>`,
+    })
+    //})()
   }
 
   sendVerificationEmail(email: string, code: string) {
-    this.sendEmail(email, code, 'Verify Your Email', 'verify-email')
+    this.sendEmail(email, code)
   }
 }
