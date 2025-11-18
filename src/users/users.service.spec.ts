@@ -184,15 +184,19 @@ describe('UserService', () => {
     const findByIdArgs = { id: 1 }
 
     it('should find an existing user', async () => {
-      usersRepository.findOneByOrFail?.mockResolvedValue(findByIdArgs)
+      //usersRepository.findOneByOrFail?.mockResolvedValue(findByIdArgs)
+      usersRepository.findOneBy?.mockResolvedValue(findByIdArgs)
       const result = await service.findById(1)
-      expect(result).toEqual({ ok: true, user: findByIdArgs })
+      //expect(result).toEqual({ ok: true, user: findByIdArgs })
+      expect(result).toEqual({ id: 1 })
     })
 
     it('should fail if no user is found', async () => {
-      usersRepository.findOneByOrFail?.mockRejectedValue(new Error())
+      // usersRepository.findOneByOrFail?.mockRejectedValue(new Error())
+      usersRepository.findOneBy?.mockResolvedValue(undefined)
       const result = await service.findById(1)
-      expect(result).toEqual({ ok: false, error: 'User not found' })
+      //expect(result).toEqual({ ok: false, error: 'User not found' })
+      expect(result).toEqual(undefined)
     })
   })
 

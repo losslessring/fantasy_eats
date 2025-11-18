@@ -45,7 +45,9 @@ export class UserResolver {
 
   @UseGuards(AuthGuard)
   @Query(() => UserProfileOutput)
-  async userProfile(@Args() userProfileInput: UserProfileInput) {
+  async userProfile(
+    @Args() userProfileInput: UserProfileInput,
+  ): Promise<UserProfileOutput> {
     try {
       const user = await this.userService.findById(userProfileInput.userId)
       if (!user) {
@@ -58,7 +60,7 @@ export class UserResolver {
       }
     } catch (e) {
       return {
-        error: 'User Not Found',
+        error: 'User not found',
         ok: false,
       }
     }
@@ -85,9 +87,7 @@ export class UserResolver {
     @Args('input') { code }: VerifyEmailInput,
   ): Promise<VerifyEmailOutput> {
     try {
-      await this.userService.verifyEmail(code)
-
-      return { ok: true }
+      return await this.userService.verifyEmail(code)
     } catch (error) {
       return {
         ok: false,

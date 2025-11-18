@@ -87,14 +87,16 @@ export class UserService {
     }
   }
 
-  async findById(id: number): Promise<UserProfileOutput> {
+  async findById(id: number): Promise<User | null> {
     //return this.users.findOneBy({ id })
-    try {
-      const user = await this.users.findOneByOrFail({ id })
-      return { ok: true, user }
-    } catch (error) {
-      return { ok: false, error: 'User not found' }
-    }
+    // try {
+    return this.users.findOneBy({ id })
+    // const user = await this.users.findOneByOrFail({ id })
+    // console.log(user)
+    // return { ok: true, user }
+    // } catch (error) {
+    //   return { ok: false, error: 'User not found' }
+    // }
   }
 
   async editProfile(
@@ -114,6 +116,7 @@ export class UserService {
       if (email) {
         user.email = email
         user.verified = false
+        await this.verifications.delete({ user: { id: user.id } })
         const verification = await this.verifications.save(
           this.verifications.create({ user }),
         )
