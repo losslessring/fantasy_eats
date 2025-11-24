@@ -8,6 +8,15 @@ import {
 } from './dtos/create-restaurant.dto'
 import { User } from 'src/users/entities/user.entity'
 import { Category } from './entities/category.entity'
+import {
+  EditRestaurantInput,
+  EditRestaurantOutput,
+} from './dtos/edit-restaurant.dto'
+import {
+  DeleteRestaurantInput,
+  DeleteRestaurantOutput,
+} from './dtos/detete-restaurant.dto'
+import { AllCategoriesOutput } from './dtos/all-categories.dto'
 
 @Injectable()
 export class RestaurantService {
@@ -17,6 +26,21 @@ export class RestaurantService {
     @InjectRepository(Category)
     private readonly categories: Repository<Category>,
   ) {}
+
+  async getOrCreateCategory(name: string): Promise<Category> {
+    const categoryName = name.trim().toLowerCase()
+
+    const categorySlug = categoryName.replace(/ /g, '-')
+    let category = await this.categories.findOneBy({ slug: categorySlug })
+
+    if (!category) {
+      category = await this.categories.save(
+        this.categories.create({ slug: categorySlug, name: categoryName }),
+      )
+    }
+
+    return category
+  }
 
   async createRestaurant(
     owner: User,
@@ -28,19 +52,10 @@ export class RestaurantService {
       }
       const newRestaurant = this.restaurants.create(createRestaurantInput)
       newRestaurant.owner = owner
-      const categoryName = createRestaurantInput.categoryName
-        .trim()
-        .toLowerCase()
 
-      const categorySlug = categoryName.replace(/ /g, '-')
-      let category = await this.categories.findOneBy({ slug: categorySlug })
-
-      if (!category) {
-        category = await this.categories.save(
-          this.categories.create({ slug: categorySlug, name: categoryName }),
-        )
-      }
-
+      const category = await this.getOrCreateCategory(
+        createRestaurantInput.categoryName,
+      )
       newRestaurant.category = category
 
       await this.restaurants.save(newRestaurant)
@@ -50,6 +65,93 @@ export class RestaurantService {
         ok: false,
         //error: 'Could not create a restaurant',
         error,
+      }
+    }
+  }
+
+  async editRestaurant(
+    owner: User,
+    editRestaurantInput: EditRestaurantInput,
+  ): Promise<EditRestaurantOutput> {
+    try {
+      const restaurant = await this.restaurants.findOneBy({
+        id: editRestaurantInput.restaurantId,
+      })
+
+      if (!restaurant) {
+        return {
+          ok: false,
+          error: 'Restaurant not found',
+        }
+      }
+
+      if (owner.id !== restaurant.ownerId) {
+        return {
+          ok: false,
+          error: "You can't edit restaurant that you dont own",
+        }
+      }
+
+      let category: Category | null = null
+      if (editRestaurantInput.categoryName) {
+        category = await this.getOrCreateCategory(
+          editRestaurantInput.categoryName,
+        )
+      }
+
+      await this.restaurants.save([
+        {
+          id: editRestaurantInput.restaurantId,
+          ...editRestaurantInput,
+          ...(category && { category }),
+        },
+      ])
+      return { ok: true }
+    } catch (error) {
+      return { ok: false, error: 'Could not edit restaurant' }
+    }
+  }
+
+  async deleteRestaurant(
+    owner: User,
+    { restaurantId }: DeleteRestaurantInput,
+  ): Promise<DeleteRestaurantOutput> {
+    try {
+      const restaurant = await this.restaurants.findOneBy({
+        id: restaurantId,
+      })
+
+      if (!restaurant) {
+        return {
+          ok: false,
+          error: 'Restaurant not found',
+        }
+      }
+
+      if (owner.id !== restaurant.ownerId) {
+        return {
+          ok: false,
+          error: "You can't delete a restaurant that you dont own",
+        }
+      }
+      await this.restaurants.delete(restaurantId)
+      return { ok: true }
+    } catch (error) {
+      return {
+        ok: false,
+        error: 'Could not delete a restaurant',
+      }
+    }
+  }
+
+  async allCategories(): Promise<AllCategoriesOutput> {
+    try {
+      const categories = await this.categories.find()
+      return { ok: true, categories }
+    } catch (error) {
+      return {
+        ok: false,
+        error: 'Could not load categories',
       }
     }
   }

@@ -59,6 +59,7 @@ import { Category } from './restaurants/entities/category.entity'
       graphiql: true,
       context: ({ req }) => ({ user: req['user'] }),
     }),
+    AuthModule,
     UsersModule,
     RestaurantsModule,
     JwtModule.forRoot({ privateKey: String(process.env.PRIVATE_KEY) }),
