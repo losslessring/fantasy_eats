@@ -1,26 +1,25 @@
+import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo'
 import {
+  MiddlewareConsumer,
   Module,
   NestModule,
-  MiddlewareConsumer,
   RequestMethod,
 } from '@nestjs/common'
-import { GraphQLModule } from '@nestjs/graphql'
-import { join } from 'path'
-import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo'
-import { RestaurantsModule } from './restaurants/restaurants.module'
-import { TypeOrmModule } from '@nestjs/typeorm'
 import { ConfigModule } from '@nestjs/config'
+import { GraphQLModule } from '@nestjs/graphql'
+import { TypeOrmModule } from '@nestjs/typeorm'
 import * as Joi from 'joi'
-import { Restaurant } from './restaurants/entities/restaurant.entity'
-import { UsersModule } from './users/users.module'
-import { CommonModule } from './common/common.module'
-import { User } from './users/entities/user.entity'
-import { JwtModule } from './jwt/jwt.module'
-import { JwtMiddleware } from './jwt/jwt.middleware'
 import { AuthModule } from './auth/auth.module'
-import { Verification } from './users/entities/verification.entity'
+import { JwtMiddleware } from './jwt/jwt.middleware'
+import { JwtModule } from './jwt/jwt.module'
 import { MailModule } from './mail/mail.module'
 import { Category } from './restaurants/entities/category.entity'
+import { Dish } from './restaurants/entities/dish.entity'
+import { Restaurant } from './restaurants/entities/restaurant.entity'
+import { RestaurantsModule } from './restaurants/restaurants.module'
+import { User } from './users/entities/user.entity'
+import { Verification } from './users/entities/verification.entity'
+import { UsersModule } from './users/users.module'
 
 @Module({
   imports: [
@@ -51,7 +50,7 @@ import { Category } from './restaurants/entities/category.entity'
       synchronize: process.env.NODE_ENV !== 'prod',
       logging:
         process.env.NODE_ENV !== 'prod' && process.env.NODE_ENV !== 'test',
-      entities: [User, Verification, Restaurant, Category],
+      entities: [User, Verification, Restaurant, Category, Dish],
     }),
     GraphQLModule.forRoot<ApolloDriverConfig>({
       driver: ApolloDriver,
