@@ -4,10 +4,12 @@ import {
   RestaurantInput,
   RestaurantOutput,
 } from 'src/restaurants/dtos/restaurant.dto'
+import { Dish } from 'src/restaurants/entities/dish.entity'
 import { Restaurant } from 'src/restaurants/entities/restaurant.entity'
 import { User } from 'src/users/entities/user.entity'
 import { Repository } from 'typeorm'
 import { CreateOrderInput, CreateOrderOutput } from './dtos/create-order.dto'
+import { OrderItem } from './entities/order-item.entity'
 import { Order } from './entities/order.entity'
 
 @Injectable()
@@ -16,8 +18,14 @@ export class OrderService {
     @InjectRepository(Order)
     private readonly orders: Repository<Order>,
 
+    @InjectRepository(OrderItem)
+    private readonly orderItems: Repository<OrderItem>,
+
     @InjectRepository(Restaurant)
     private readonly restaurants: Repository<Restaurant>,
+
+    @InjectRepository(Dish)
+    private readonly dishes: Repository<Dish>,
   ) {}
 
   async createOrder(
@@ -36,14 +44,64 @@ export class OrderService {
           error: 'Restaurant not found',
         }
       }
+      let orderFinalPrice = 0
+      let orderItems: OrderItem[] = []
+      for (const item of items) {
+        const dish = await this.dishes.findOne({ where: { id: item.dishId } })
 
-      const order = await this.orders.save(
-        this.orders.create({ customer, restaurant }),
+        if (!dish) {
+          return {
+            ok: false,
+            error: 'Dish not found',
+          }
+        }
+
+        if (!item.options) {
+          continue
+        }
+
+        let dishFinalPrice = dish.price
+        for (const itemOption of item.options) {
+          const dishOption = dish.options?.find(
+            (dishOption) => dishOption.name === itemOption.name,
+          )
+          if (dishOption) {
+            if (dishOption.extra) {
+              dishFinalPrice = dishFinalPrice + dishOption.extra
+            } else {
+              const dishOptionChoice = dishOption.choices?.find(
+                (optionChoice) => optionChoice.name === itemOption.choice,
+              )
+              if (dishOptionChoice) {
+                if (dishOptionChoice.extra) {
+                  dishFinalPrice = dishFinalPrice + dishOptionChoice.extra
+                }
+              }
+            }
+          }
+        }
+        orderFinalPrice = orderFinalPrice + dishFinalPrice
+        const orderItem = await this.orderItems.save(
+          this.orderItems.create({ dish, options: item.options }),
+        )
+        orderItems.push(orderItem)
+      }
+
+      await this.orders.save(
+        this.orders.create({
+          customer,
+          restaurant,
+          total: orderFinalPrice,
+          items: orderItems,
+        }),
       )
+      return {
+        ok: true,
+      }
     } catch (error) {
       return {
         ok: false,
-        error: 'Could not find a restaurant',
+        error: 'Could not create an order',
       }
     }
   }
