@@ -110,17 +110,39 @@ export class OrderService {
     user: User,
     { status }: GetOrdersInput,
   ): Promise<GetOrdersOutput> {
+    const statusQueryCondition = status ? `AND(status = '${status}')` : ''
     try {
       if (user.role === UserRole.Client) {
-        const orders = await this.orders.find({
-          where: {
-            customer: user,
-          },
-        })
+        // console.log(user)
+        // const orders = await this.orders.find({
+        //   where: {
+        // customer: user,
+        //...(status && { status }),
+        //   },
+        //   relations: ['customer'],
+        // })
+
+        // const orders = await this.orders
+        //   .createQueryBuilder('order')
+        //   .select()
+
+        //   .getMany()
+
+        const orders = await this.orders.query(`
+          SELECT public.order.id, public.order."createdAt", public.order."updatedAt", "total", "status", "customerId", "driverId", "restaurantId"
+          FROM public.order
+          JOIN public.restaurant
+          ON public.order."restaurantId" = public.restaurant.id
+          WHERE ("customerId" = ${user.id}) ${statusQueryCondition} ;
+        `)
+
+        console.log(orders)
+        return { ok: true, orders }
       } else if (user.role === UserRole.Delivery) {
         const orders = await this.orders.find({
           where: {
             driver: user,
+            status,
           },
         })
       } else if (user.role === UserRole.Owner) {
@@ -145,9 +167,8 @@ export class OrderService {
         FROM public.order
         JOIN public.restaurant
         ON public.order."restaurantId" = public.restaurant.id
-        WHERE "ownerId" = ${user.id};
+        WHERE ("ownerId" = ${user.id}) ${statusQueryCondition};
         `)
-        console.log(orders)
 
         return { ok: true, orders }
       }
