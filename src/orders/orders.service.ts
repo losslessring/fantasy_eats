@@ -1,17 +1,15 @@
 import { Injectable } from '@nestjs/common'
 import { InjectRepository } from '@nestjs/typeorm'
-import {
-  RestaurantInput,
-  RestaurantOutput,
-} from 'src/restaurants/dtos/restaurant.dto'
 import { Dish } from 'src/restaurants/entities/dish.entity'
 import { Restaurant } from 'src/restaurants/entities/restaurant.entity'
 import { User, UserRole } from 'src/users/entities/user.entity'
 import { Repository } from 'typeorm'
 import { CreateOrderInput, CreateOrderOutput } from './dtos/create-order.dto'
+import { EditOrderInput, EditOrderOutput } from './dtos/edit-order.dto'
+import { GetOrderInput, GetOrderOutput } from './dtos/get-order.dto'
 import { GetOrdersInput, GetOrdersOutput } from './dtos/get-orders.dto'
 import { OrderItem } from './entities/order-item.entity'
-import { Order } from './entities/order.entity'
+import { Order, OrderStatus } from './entities/order.entity'
 
 @Injectable()
 export class OrderService {
@@ -113,21 +111,6 @@ export class OrderService {
     const statusQueryCondition = status ? `AND(status = '${status}')` : ''
     try {
       if (user.role === UserRole.Client) {
-        // console.log(user)
-        // const orders = await this.orders.find({
-        //   where: {
-        // customer: user,
-        //...(status && { status }),
-        //   },
-        //   relations: ['customer'],
-        // })
-
-        // const orders = await this.orders
-        //   .createQueryBuilder('order')
-        //   .select()
-
-        //   .getMany()
-
         const orders = await this.orders.query(`
           SELECT public.order.id, public.order."createdAt", public.order."updatedAt", "total", "status", "customerId", "driverId", "restaurantId"
           FROM public.order
@@ -136,7 +119,6 @@ export class OrderService {
           WHERE ("customerId" = ${user.id}) ${statusQueryCondition} ;
         `)
 
-        console.log(orders)
         return { ok: true, orders }
       } else if (user.role === UserRole.Delivery) {
         const orders = await this.orders.find({
@@ -146,22 +128,6 @@ export class OrderService {
           },
         })
       } else if (user.role === UserRole.Owner) {
-        // console.log(user)
-
-        // const restaurants = await this.restaurants.find({
-        //   //   where: {
-        //   //     owner: user,
-        //   //   },
-        //   relations: ['orders'],
-        // })
-        // console.log(restaurants)
-
-        // Find out why not finding restaurants with owner
-        // console.log(restaurants)
-        // const orders = restaurants
-        //   .map((restaurant) => restaurant.orders)
-        //   .flat(1)
-
         const orders = await this.orders.query(`
         SELECT public.order.id, public.order."createdAt", public.order."updatedAt", "total", "status", "customerId", "driverId", "restaurantId", "ownerId"
         FROM public.order
@@ -180,6 +146,129 @@ export class OrderService {
       return {
         ok: false,
         error: 'Could not get orders',
+      }
+    }
+  }
+
+  canSeeOrder(user: User, order: Order): boolean {
+    let canSee = true
+
+    if (user.role === UserRole.Client && order.customerId !== user.id) {
+      canSee = false
+    }
+    if (user.role === UserRole.Delivery && order.driverId !== user.id) {
+      canSee = false
+    }
+
+    if (
+      user.role === UserRole.Owner &&
+      order?.restaurant?.ownerId !== user.id
+    ) {
+      canSee = false
+    }
+
+    return canSee
+  }
+
+  async getOrder(
+    user: User,
+    { id: orderId }: GetOrderInput,
+  ): Promise<GetOrderOutput> {
+    try {
+      const order = await this.orders.findOne({
+        where: { id: orderId },
+        relations: ['restaurant'],
+      })
+
+      if (!order) {
+        return {
+          ok: false,
+          error: 'Order not found',
+        }
+      }
+
+      if (!this.canSeeOrder(user, order)) {
+        return {
+          ok: false,
+          error: 'Not allowed to access the order information',
+        }
+      }
+      return {
+        ok: true,
+        order,
+      }
+    } catch (error) {
+      return {
+        ok: false,
+        error: 'Could not load order',
+      }
+    }
+  }
+
+  async editOrder(
+    user: User,
+    { id: orderId, status }: EditOrderInput,
+  ): Promise<EditOrderOutput> {
+    try {
+      const order = await this.orders.findOne({
+        where: { id: orderId },
+        relations: ['restaurant'],
+      })
+
+      if (!order) {
+        return {
+          ok: false,
+          error: 'Order not found',
+        }
+      }
+
+      if (!this.canSeeOrder(user, order)) {
+        return {
+          ok: false,
+          error: 'Not allowed to access the order information',
+        }
+      }
+
+      let canEdit = true
+
+      if (user.role === UserRole.Client) {
+        canEdit = false
+      }
+
+      if (user.role === UserRole.Owner) {
+        if (status !== OrderStatus.Cooking && status !== OrderStatus.Cooked) {
+          canEdit = false
+        }
+      }
+
+      if (user.role === UserRole.Delivery) {
+        if (
+          status !== OrderStatus.PickedUp &&
+          status !== OrderStatus.Delivered
+        ) {
+          canEdit = false
+        }
+      }
+
+      if (!canEdit) {
+        return {
+          ok: false,
+          error: 'Not allowed to edit order',
+        }
+      }
+
+      await this.orders.save([
+        {
+          id: orderId,
+          status,
+        },
+      ])
+
+      return { ok: true }
+    } catch (error) {
+      return {
+        ok: false,
+        error: 'Could not edit order',
       }
     }
   }

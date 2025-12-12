@@ -1,11 +1,21 @@
-import { Args, Mutation, Resolver, Query } from '@nestjs/graphql'
+import { Args, Mutation, Query, Resolver, Subscription } from '@nestjs/graphql'
 import { AuthUser } from 'src/auth/auth-user.decorator'
 import { Role } from 'src/auth/role.decorator'
 import { User } from 'src/users/entities/user.entity'
-import { CreateOrderOutput, CreateOrderInput } from './dtos/create-order.dto'
+import { CreateOrderInput, CreateOrderOutput } from './dtos/create-order.dto'
+import { EditOrderInput, EditOrderOutput } from './dtos/edit-order.dto'
+import { GetOrderInput, GetOrderOutput } from './dtos/get-order.dto'
 import { GetOrdersInput, GetOrdersOutput } from './dtos/get-orders.dto'
 import { Order } from './entities/order.entity'
 import { OrderService } from './orders.service'
+import { PubSub } from 'graphql-subscriptions'
+
+const pubsub = new PubSub()
+// pubsub.subscribe('hotPotatos', () => {
+//   console.log('Subscribed to event')
+//   //   console.log(pubsub)
+// })
+let i = 0
 
 @Resolver(() => Order)
 export class OrderResolver {
@@ -28,5 +38,38 @@ export class OrderResolver {
     @Args('input') getOrdersInput: GetOrdersInput,
   ): Promise<GetOrdersOutput> {
     return this.ordersService.getOrders(user, getOrdersInput)
+  }
+
+  @Query(() => GetOrderOutput)
+  @Role(['Any'])
+  async getOrder(
+    @AuthUser() user: User,
+    @Args('input') getOrderInput: GetOrderInput,
+  ): Promise<GetOrderOutput> {
+    return this.ordersService.getOrder(user, getOrderInput)
+  }
+
+  @Mutation(() => EditOrderOutput)
+  @Role(['Any'])
+  async editOrder(
+    @AuthUser() user: User,
+    @Args('input') editOrderInput: EditOrderInput,
+  ): Promise<EditOrderOutput> {
+    return this.ordersService.editOrder(user, editOrderInput)
+  }
+
+  @Mutation(() => Boolean)
+  async potatoReady() {
+    console.log('Sent event')
+    i = i + 1
+    pubsub.publish('hotPotatos', { readyPotato: `Your potato is ready ${i}` })
+    return true
+  }
+
+  @Subscription(() => String)
+  readyPotato() {
+    console.log('Got event')
+
+    return pubsub.asyncIterableIterator('hotPotatos')
   }
 }

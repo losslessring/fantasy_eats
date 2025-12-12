@@ -64,10 +64,19 @@ import { OrderItem } from './orders/entities/order-item.entity'
       ],
     }),
     GraphQLModule.forRoot<ApolloDriverConfig>({
+      // installSubscriptionHandlers: true,
+      subscriptions: {
+        'graphql-ws': true,
+      },
       driver: ApolloDriver,
       autoSchemaFile: true,
       graphiql: true,
-      context: ({ req }) => ({ user: req['user'] }),
+      context: ({ req, connectionParams, extra }) => {
+        if (req) {
+          return { user: req['user'] }
+        } else {
+        }
+      },
     }),
     AuthModule,
     UsersModule,
