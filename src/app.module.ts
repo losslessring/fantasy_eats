@@ -23,6 +23,7 @@ import { UsersModule } from './users/users.module'
 import { OrdersModule } from './orders/orders.module'
 import { Order } from './orders/entities/order.entity'
 import { OrderItem } from './orders/entities/order-item.entity'
+import { CommonModule } from './common/common.module'
 
 @Module({
   imports: [
@@ -72,9 +73,8 @@ import { OrderItem } from './orders/entities/order-item.entity'
       autoSchemaFile: true,
       graphiql: true,
       context: ({ req, connectionParams, extra }) => {
-        if (req) {
-          return { user: req['user'] }
-        } else {
+        return {
+          token: req ? req.headers['x-jwt'] : connectionParams['X-JWT'],
         }
       },
     }),
@@ -88,14 +88,16 @@ import { OrderItem } from './orders/entities/order-item.entity'
       domain: String(process.env.MAIL_DOMAIN_NAME),
     }),
     OrdersModule,
+    CommonModule,
   ],
   controllers: [],
   providers: [],
 })
-export class AppModule implements NestModule {
-  configure(consumer: MiddlewareConsumer) {
-    consumer
-      .apply(JwtMiddleware)
-      .forRoutes({ path: '/graphql', method: RequestMethod.POST })
-  }
-}
+// export class AppModule implements NestModule {
+// configure(consumer: MiddlewareConsumer) {
+//   consumer
+//     .apply(JwtMiddleware)
+//     .forRoutes({ path: '/graphql', method: RequestMethod.POST })
+// }
+// }
+export class AppModule {}
