@@ -61,7 +61,7 @@ export class OrderResolver {
   @Mutation(() => Boolean)
   async potatoReady(@Args('potatoId') potatoId: number) {
     console.log('Sent event')
-    i = i + 1
+    // i = i + 1
     await this.pubSub.publish('hotPotatos', {
       //readyPotato: `Your potato ${potatoId} is ready ${i}`,
       readyPotato: potatoId,
@@ -71,8 +71,11 @@ export class OrderResolver {
 
   @Subscription(() => String, {
     filter: ({ readyPotato }, { potatoId }) => {
-      //console.log(payload, variables, context)
       return readyPotato === potatoId
+    },
+    resolve: ({ readyPotato }) => {
+      i = i + 1
+      return `Your potato with the id ${readyPotato} is ready ${i} times`
     },
   })
   @Role(['Any'])
