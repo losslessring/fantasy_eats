@@ -3,12 +3,19 @@ import { Args, Mutation, Query, Resolver, Subscription } from '@nestjs/graphql'
 import { PubSub } from 'graphql-subscriptions'
 import { AuthUser } from 'src/auth/auth-user.decorator'
 import { Role } from 'src/auth/role.decorator'
-import { PUB_SUB } from 'src/common/common.constants'
+import {
+  NEW_COOKED_ORDER,
+  NEW_ORDER_UPDATE,
+  NEW_PENDING_ORDER,
+  PUB_SUB,
+} from 'src/common/common.constants'
 import { User } from 'src/users/entities/user.entity'
 import { CreateOrderInput, CreateOrderOutput } from './dtos/create-order.dto'
 import { EditOrderInput, EditOrderOutput } from './dtos/edit-order.dto'
 import { GetOrderInput, GetOrderOutput } from './dtos/get-order.dto'
 import { GetOrdersInput, GetOrdersOutput } from './dtos/get-orders.dto'
+import { OrderUpdatesInput } from './dtos/order-updates.dto'
+import { TakeOrderInput, TakeOrderOutput } from './dtos/take-order.dto'
 import { Order } from './entities/order.entity'
 import { OrderService } from './orders.service'
 
@@ -58,28 +65,59 @@ export class OrderResolver {
     return this.ordersService.editOrder(user, editOrderInput)
   }
 
-  @Mutation(() => Boolean)
-  async potatoReady(@Args('potatoId') potatoId: number) {
-    console.log('Sent event')
-    // i = i + 1
-    await this.pubSub.publish('hotPotatos', {
-      //readyPotato: `Your potato ${potatoId} is ready ${i}`,
-      readyPotato: potatoId,
-    })
-    return true
+  @Subscription(() => Order, {
+    filter: ({ pendingOrders: { ownerId } }, _, { user }) => {
+      return ownerId === user.id
+    },
+
+    resolve: ({ pendingOrders: { order } }) => order,
+  })
+  @Role(['Owner'])
+  pendingOrders() {
+    return this.pubSub.asyncIterableIterator(NEW_PENDING_ORDER)
   }
 
-  @Subscription(() => String, {
-    filter: ({ readyPotato }, { potatoId }) => {
-      return readyPotato === potatoId
-    },
-    resolve: ({ readyPotato }) => {
-      i = i + 1
-      return `Your potato with the id ${readyPotato} is ready ${i} times`
+  @Subscription(() => Order)
+  @Role(['Delivery'])
+  cookedOrders() {
+    return this.pubSub.asyncIterableIterator(NEW_COOKED_ORDER)
+  }
+
+  @Subscription(() => Order, {
+    filter: (
+      { orderUpdates: order }: { orderUpdates: Order },
+      { input }: { input: OrderUpdatesInput },
+      { user }: { user: User },
+    ) => {
+      // console.log('Order Driver id: ', order.driverId)
+      // console.log('Order Customer id: ', order.customerId)
+      // console.log('Order Owner id: ', order.restaurant?.ownerId)
+      // console.log('User id: ', user.id)
+      // console.log(order)
+      // console.log(input)
+      // console.log(user)
+      if (
+        order.driverId !== user.id &&
+        order.customerId !== user.id &&
+        order.restaurant?.ownerId !== user.id
+      ) {
+        return false
+      }
+
+      return order.id === input.id
     },
   })
   @Role(['Any'])
-  readyPotato(@Args('potatoId') potatoId: number) {
-    return this.pubSub.asyncIterableIterator('hotPotatos')
+  orderUpdates(@Args('input') orderUpdatesInput: OrderUpdatesInput) {
+    return this.pubSub.asyncIterableIterator(NEW_ORDER_UPDATE)
+  }
+
+  @Mutation(() => TakeOrderOutput)
+  @Role(['Delivery'])
+  takeOrder(
+    @AuthUser() driver: User,
+    @Args('input') takeOrderInput: TakeOrderInput,
+  ): Promise<TakeOrderOutput> {
+    return this.ordersService.takeOrder(driver, takeOrderInput)
   }
 }

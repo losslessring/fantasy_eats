@@ -1,16 +1,10 @@
 import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo'
-import {
-  MiddlewareConsumer,
-  Module,
-  NestModule,
-  RequestMethod,
-} from '@nestjs/common'
+import { Module } from '@nestjs/common'
 import { ConfigModule } from '@nestjs/config'
 import { GraphQLModule } from '@nestjs/graphql'
 import { TypeOrmModule } from '@nestjs/typeorm'
 import * as Joi from 'joi'
 import { AuthModule } from './auth/auth.module'
-import { JwtMiddleware } from './jwt/jwt.middleware'
 import { JwtModule } from './jwt/jwt.module'
 import { MailModule } from './mail/mail.module'
 import { Category } from './restaurants/entities/category.entity'
@@ -24,6 +18,8 @@ import { OrdersModule } from './orders/orders.module'
 import { Order } from './orders/entities/order.entity'
 import { OrderItem } from './orders/entities/order-item.entity'
 import { CommonModule } from './common/common.module'
+import { PaymentsModule } from './payments/payments.module'
+import { Payment } from './payments/entities/payment.entity'
 
 @Module({
   imports: [
@@ -62,10 +58,10 @@ import { CommonModule } from './common/common.module'
         Dish,
         Order,
         OrderItem,
+        Payment,
       ],
     }),
     GraphQLModule.forRoot<ApolloDriverConfig>({
-      // installSubscriptionHandlers: true,
       subscriptions: {
         'graphql-ws': true,
       },
@@ -74,7 +70,7 @@ import { CommonModule } from './common/common.module'
       graphiql: true,
       context: ({ req, connectionParams, extra }) => {
         return {
-          token: req ? req.headers['x-jwt'] : connectionParams['X-JWT'],
+          token: req ? req.headers['x-jwt'] : connectionParams['x-jwt'],
         }
       },
     }),
@@ -89,15 +85,9 @@ import { CommonModule } from './common/common.module'
     }),
     OrdersModule,
     CommonModule,
+    PaymentsModule,
   ],
   controllers: [],
   providers: [],
 })
-// export class AppModule implements NestModule {
-// configure(consumer: MiddlewareConsumer) {
-//   consumer
-//     .apply(JwtMiddleware)
-//     .forRoutes({ path: '/graphql', method: RequestMethod.POST })
-// }
-// }
 export class AppModule {}
