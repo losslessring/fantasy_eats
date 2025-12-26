@@ -3,6 +3,7 @@ import { Module } from '@nestjs/common'
 import { ConfigModule } from '@nestjs/config'
 import { GraphQLModule } from '@nestjs/graphql'
 import { TypeOrmModule } from '@nestjs/typeorm'
+import { ScheduleModule } from '@nestjs/schedule'
 import * as Joi from 'joi'
 import { AuthModule } from './auth/auth.module'
 import { JwtModule } from './jwt/jwt.module'
@@ -77,6 +78,7 @@ import { Payment } from './payments/entities/payment.entity'
     AuthModule,
     UsersModule,
     RestaurantsModule,
+    ScheduleModule.forRoot(),
     JwtModule.forRoot({ privateKey: String(process.env.PRIVATE_KEY) }),
     MailModule.forRoot({
       apiKey: String(process.env.MAIL_API_KEY),
