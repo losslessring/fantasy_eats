@@ -88,15 +88,7 @@ export class UserService {
   }
 
   async findById(id: number): Promise<User | null> {
-    //return this.users.findOneBy({ id })
-    // try {
     return this.users.findOneBy({ id })
-    // const user = await this.users.findOneByOrFail({ id })
-    // console.log(user)
-    // return { ok: true, user }
-    // } catch (error) {
-    //   return { ok: false, error: 'User not found' }
-    // }
   }
 
   async editProfile(
