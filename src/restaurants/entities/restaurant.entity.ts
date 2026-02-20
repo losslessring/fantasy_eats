@@ -28,11 +28,6 @@ export class Restaurant extends CoreEntity {
   address: string
 
   @Field(() => String)
-  @Column({ nullable: true })
-  @IsString()
-  ownerName: string
-
-  @Field(() => String)
   @Column()
   @IsString()
   categoryName: string
@@ -45,8 +40,12 @@ export class Restaurant extends CoreEntity {
   })
   category: Category
 
-  @Field(() => User)
-  @ManyToOne(() => User, (user) => user.restaurants, { onDelete: 'CASCADE' })
+  @Field((type) => User, { nullable: true })
+  @ManyToOne((type) => User, (user) => user.restaurants, {
+    nullable: true,
+    onDelete: 'CASCADE',
+    eager: true,
+  })
   owner: User
 
   @RelationId((restaurant: Restaurant) => restaurant.owner)

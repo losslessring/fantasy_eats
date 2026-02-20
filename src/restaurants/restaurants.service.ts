@@ -73,7 +73,7 @@ export class RestaurantService {
       newRestaurant.category = category
 
       await this.restaurants.save(newRestaurant)
-      return { ok: true }
+      return { ok: true, restaurantId: newRestaurant.id }
     } catch (error) {
       return {
         ok: false,
@@ -389,7 +389,16 @@ export class RestaurantService {
 
   async myRestaurants(owner: User): Promise<MyRestaurantsOutput> {
     try {
-      const restaurants = await this.restaurants.findBy({ id: owner.id })
+      const ownRestaurants = await this.restaurants.query(`
+          SELECT *
+          FROM public.restaurant
+          WHERE ("ownerId" = ${owner.id});
+        `)
+      const restaurants = ownRestaurants.map((restaurant) => ({
+        ...restaurant,
+        owner,
+      }))
+
       return {
         restaurants,
         ok: true,
