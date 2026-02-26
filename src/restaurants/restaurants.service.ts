@@ -421,8 +421,29 @@ export class RestaurantService {
         where: { id },
         relations: ['menu', 'orders'],
       })
+
+      if (!restaurant) {
+        return {
+          ok: false,
+          error: 'Could not find restaurant',
+        }
+      }
+
+      const orders = await this.restaurants.query(`
+      SELECT public.order.id, public.order."createdAt", public.order."updatedAt", "total", "status", "customerId", "driverId", "restaurantId"
+      FROM public.order
+      WHERE ("restaurantId" = ${restaurant.id})
+      ORDER BY "createdAt" ASC
+      ;
+      `)
+
+      const restaurantWithOrders = {
+        ...restaurant,
+        orders,
+      }
+
       return {
-        restaurant: restaurant.ownerId === owner.id ? restaurant : undefined,
+        restaurant: restaurantWithOrders,
         ok: true,
       }
     } catch {
