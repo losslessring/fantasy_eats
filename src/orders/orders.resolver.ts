@@ -89,13 +89,6 @@ export class OrderResolver {
       { input }: { input: OrderUpdatesInput },
       { user }: { user: User },
     ) => {
-      // console.log('Order Driver id: ', order.driverId)
-      // console.log('Order Customer id: ', order.customerId)
-      // console.log('Order Owner id: ', order.restaurant?.ownerId)
-      // console.log('User id: ', user.id)
-      // console.log(order)
-      // console.log(input)
-      // console.log(user)
       if (
         order.driverId !== user.id &&
         order.customerId !== user.id &&
