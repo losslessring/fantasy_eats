@@ -217,9 +217,10 @@ export class RestaurantService {
 
   async allRestaurants({ page }: RestaurantsInput): Promise<RestaurantsOutput> {
     try {
+      const itemsInPage = 6
       const restaurants = await this.restaurants.find({
-        skip: (page - 1) * 3,
-        take: 3,
+        skip: (page - 1) * itemsInPage,
+        take: itemsInPage,
         order: {
           isPromoted: 'DESC',
         },
@@ -230,7 +231,7 @@ export class RestaurantService {
       return {
         ok: true,
         results: restaurants,
-        totalPages: Math.ceil(totalResults / 3),
+        totalPages: Math.ceil(totalResults / itemsInPage),
         totalResults,
       }
     } catch (error) {
